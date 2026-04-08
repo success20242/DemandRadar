@@ -1,19 +1,30 @@
-version: "3.8"
+version: "3.9"  # you can remove or leave; Docker ignores it
 
 services:
+  mongodb:
+    image: mongo
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    env_file:
+      - .env
+
   backend:
     build: ./backend
+    container_name: demandradar-backend
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT}:8000"
+    env_file:
+      - .env
     depends_on:
       - mongodb
 
   frontend:
     build: ./frontend
+    container_name: demandradar-frontend
     ports:
-      - "3000:3000"
-
-  mongodb:
-    image: mongo
-    ports:
-      - "27017:27017"
+      - "${FRONTEND_PORT}:3000"
+    env_file:
+      - .env
+    depends_on:
+      - backend
