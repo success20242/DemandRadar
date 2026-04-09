@@ -1,8 +1,8 @@
 # Use Nginx to serve static files
 FROM nginx:alpine
 
-# Copy all frontend files directly
-COPY . /usr/share/nginx/html
+# Copy the compiled React build to Nginx's html folder
+COPY build/ /usr/share/nginx/html
 
 # Expose port 80
 EXPOSE 80
