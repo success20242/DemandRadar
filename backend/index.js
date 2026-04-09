@@ -1,9 +1,13 @@
 const express = require("express");
+const cors = require("cors"); // ✅ ADD THIS
 const { WebSocketServer } = require("ws");
 const http = require("http");
 
 const app = express();
 const PORT = 5000;
+
+// ✅ ADD THIS LINE
+app.use(cors());
 
 // Dummy trending data
 let trendingData = {
