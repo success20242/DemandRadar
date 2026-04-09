@@ -12,7 +12,6 @@ import threading
 # --------------------------
 app = FastAPI()
 
-# Ensure static folder exists
 if not os.path.exists("static"):
     os.makedirs("static")
 
@@ -66,11 +65,9 @@ def fetch_trends():
             trends = []
     except Exception as e:
         print("Pytrends fetch failed:", e)
-        # fallback sample data
         trends = ["sample health tip", "new job openings", "buy smartphone", "online course", "repair service"]
 
     now = datetime.datetime.utcnow()
-
     for q in trends:
         cat = categorize(q)
         collection.update_one(
@@ -147,7 +144,6 @@ def trending():
     generate_wordcloud()
 
     top = list(collection.find().sort("count", -1).limit(10))
-
     cats = {}
     for d in collection.find():
         c = d.get("category", "other")
