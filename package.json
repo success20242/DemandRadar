@@ -3,9 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "start:backend": "cd backend && node index.js", 
-    "start:frontend": "cd frontend && npm start",
-    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\""
+    "start": "concurrently \"npm start --prefix backend\" \"npm start --prefix frontend\""
   },
   "devDependencies": {
     "concurrently": "^8.2.0"
