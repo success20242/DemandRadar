@@ -1,10 +1,11 @@
-FROM node:18
+# Use Nginx to serve static files
+FROM nginx:alpine
 
-WORKDIR /app
+# Copy all frontend files directly
+COPY . /usr/share/nginx/html
 
-COPY package.json .
-RUN npm install
+# Expose port 80
+EXPOSE 80
 
-COPY . .
-
-CMD ["npm", "start"]
+# Start Nginx
+CMD ["nginx", "-g", "daemon off;"]

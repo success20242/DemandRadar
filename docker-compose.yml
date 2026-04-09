@@ -1,30 +1,37 @@
-version: "3.9"  # you can remove or leave; Docker ignores it
+version: "3.9"
 
 services:
   mongodb:
-    image: mongo
+    image: mongo:6.0
     container_name: mongodb
     ports:
       - "27017:27017"
-    env_file:
-      - .env
+    volumes:
+      - mongo_data:/data/db
 
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: demandradar-backend
-    ports:
-      - "${BACKEND_PORT}:8000"
-    env_file:
-      - .env
     depends_on:
       - mongodb
+    ports:
+      - "8000:8000"
+    environment:
+      MONGO_URI: "mongodb://mongodb:27017/"
+    volumes:
+      - ./backend/static:/app/static
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: demandradar-frontend
-    ports:
-      - "${FRONTEND_PORT}:3000"
-    env_file:
-      - .env
     depends_on:
       - backend
+    ports:
+      - "3000:80"  # maps host port 3000 to container's Nginx port 80
+
+volumes:
+  mongo_data:

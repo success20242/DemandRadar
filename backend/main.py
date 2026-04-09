@@ -8,20 +8,24 @@ from wordcloud import WordCloud
 
 app = FastAPI()
 
+# Ensure static folder exists
 if not os.path.exists("static"):
     os.makedirs("static")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# MongoDB setup
 client = MongoClient("mongodb://mongodb:27017/")
 db = client['trending_data']
 collection = db['queries']
 trend_history = db['trend_history']
 
+# Pytrends setup
 pytrends = TrendReq()
 
 clients = []
 
+# Categories
 CATEGORIES = {
     'health': ['health','fitness','diet'],
     'education': ['school','course','exam'],
@@ -38,7 +42,13 @@ def categorize(q):
     return "other"
 
 def fetch_trends():
-    trends = pytrends.trending_searches(pn='united_states')[0].tolist()
+    try:
+        trends = pytrends.trending_searches(pn='united_states')[0].tolist()
+    except Exception as e:
+        print("Pytrends fetch failed:", e)
+        # fallback sample data
+        trends = ["sample health tip", "new job openings", "buy smartphone", "online course", "repair service"]
+
     now = datetime.datetime.utcnow()
 
     for q in trends:
@@ -85,7 +95,10 @@ def detect_spikes():
 
 async def broadcast(spikes):
     for ws in clients:
-        await ws.send_json(spikes)
+        try:
+            await ws.send_json(spikes)
+        except Exception as e:
+            print("WebSocket send error:", e)
 
 @app.websocket("/ws")
 async def ws_endpoint(ws: WebSocket):
@@ -115,12 +128,16 @@ def trending():
         "wordcloud": "/static/wordcloud.png"
     }
 
+# Async loop to continuously fetch trends
 async def loop():
     while True:
-        fetch_trends()
-        spikes = detect_spikes()
-        if spikes:
-            await broadcast(spikes)
+        try:
+            fetch_trends()
+            spikes = detect_spikes()
+            if spikes:
+                await broadcast(spikes)
+        except Exception as e:
+            print("Error in loop:", e)
         await asyncio.sleep(10)
 
 import threading
