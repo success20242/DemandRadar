@@ -59,7 +59,7 @@ function App() {
   // 📡 DATA ENGINE
   // ========================
   useEffect(() => {
-    fetch("http://localhost:8000/trending")
+    fetch("http://localhost:5000/trending")
       .then(res => res.json())
       .then(res => {
         setData(res);
@@ -67,7 +67,7 @@ function App() {
       });
 
     const connectWS = () => {
-      const ws = new WebSocket("ws://localhost:8000/ws");
+      const ws = new WebSocket("ws://localhost:5000/ws");
       wsRef.current = ws;
 
       ws.onmessage = (e) => {
@@ -92,7 +92,7 @@ function App() {
   }, []);
 
   const downloadPDF = () => {
-    window.open("http://localhost:8000/download-report", "_blank");
+    window.open("http://localhost:5000/download-report", "_blank");
   };
 
   // ========================
