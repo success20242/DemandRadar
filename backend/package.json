@@ -1,17 +1,27 @@
 {
   "name": "demandradar-backend",
-  "version": "1.0.0",
-  "description": "Backend server for DemandRadar",
+  "version": "2.0.0",
+  "description": "Enterprise AI Trend Intelligence Backend",
   "main": "index.js",
+  "type": "commonjs",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
     "cors": "^2.8.6",
     "express": "^5.2.1",
-    "ws": "^8.13.0"
+    "ws": "^8.13.0",
+    "puppeteer": "^23.0.0",
+    "openai": "^4.0.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
