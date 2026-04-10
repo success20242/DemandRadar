@@ -14,6 +14,11 @@ app.use(cors());
 app.use(express.json());
 
 // =========================
+// 📁 STATIC FILES (WORDCLOUD FIX)
+// =========================
+app.use(express.static("public")); // <-- put wordcloud.png inside /public
+
+// =========================
 // 🤖 GROQ AI CLIENT
 // =========================
 const groq = new Groq({
@@ -37,7 +42,7 @@ let trendingData = {
 };
 
 // =========================
-// 🧠 REAL GROQ REASONING ENGINE
+// 🧠 GROQ AI ENGINE
 // =========================
 async function generateAIInsight(data) {
   const top = data.top.map(t => t.query).join(", ");
@@ -50,22 +55,17 @@ ${top}
 
 Return:
 1. Why each topic is trending
-2. Market / social / tech drivers
+2. Market drivers
 3. Economic impact
 4. 7-day prediction
 
-Keep it concise, executive intelligence style.
+Keep it concise, executive style.
 `;
 
   try {
     const completion = await groq.chat.completions.create({
       model: "llama-3.1-70b-versatile",
-      messages: [
-        {
-          role: "user",
-          content: prompt
-        }
-      ],
+      messages: [{ role: "user", content: prompt }],
       temperature: 0.7
     });
 
@@ -99,72 +99,59 @@ function generateSpike() {
 }
 
 // =========================
-// 📡 API
+// 📡 API (FIXED STRUCTURE)
 // =========================
 app.get("/trending", async (req, res) => {
   const insight = await generateAIInsight(trendingData);
 
   res.json({
-    version: "enterprise-groq-v3",
-    timestamp: new Date(),
-    data: trendingData,
+    top: trendingData.top,
+    categories: trendingData.categories,
+    chart: trendingData.top.map(t => ({
+      _id: t.query,
+      count: t.count
+    })),
+    wordcloud: "/wordcloud.png", // served from /public
     insight
   });
 });
 
 // =========================
-// 📄 PDF REPORT (PUPPETEER)
+// 📄 PDF REPORT
 // =========================
 app.get("/download-report", async (req, res) => {
   const insight = await generateAIInsight(trendingData);
 
   const html = `
   <html>
-  <head>
-    <title>Enterprise Intelligence Report</title>
-    <style>
-      body { font-family: Arial; padding: 40px; }
-      h1 { color: #111827; }
-      .box { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; }
-    </style>
-  </head>
-  <body>
-    <h1>📊 Enterprise Trend Intelligence Report</h1>
+  <body style="font-family: Arial; padding: 40px;">
+    <h1>📊 Enterprise Intelligence Report</h1>
     <p><b>Date:</b> ${new Date().toISOString()}</p>
 
-    <div class="box">
-      <h2>🔥 Top Trends</h2>
-      ${trendingData.top
-        .map(t => `<p><b>${t.query}</b> — ${t.count}</p>`)
-        .join("")}
-    </div>
+    <h2>🔥 Trends</h2>
+    ${trendingData.top.map(t => `<p>${t.query} — ${t.count}</p>`).join("")}
 
-    <div class="box">
-      <h2>🧠 Groq AI Insight</h2>
-      <p>${insight}</p>
-    </div>
+    <h2>🧠 AI Insight</h2>
+    <p>${insight}</p>
   </body>
   </html>
   `;
 
   const browser = await puppeteer.launch({
     headless: "new",
-    args: ["--no-sandbox", "--disable-setuid-sandbox"]
+    args: ["--no-sandbox"]
   });
 
   const page = await browser.newPage();
-  await page.setContent(html, { waitUntil: "networkidle0" });
+  await page.setContent(html);
 
-  const pdf = await page.pdf({
-    format: "A4",
-    printBackground: true
-  });
+  const pdf = await page.pdf({ format: "A4" });
 
   await browser.close();
 
   res.set({
     "Content-Type": "application/pdf",
-    "Content-Disposition": "attachment; filename=groq-report.pdf"
+    "Content-Disposition": "attachment; filename=report.pdf"
   });
 
   res.send(pdf);
@@ -187,19 +174,31 @@ function broadcast(data) {
 }
 
 // =========================
-// 🔥 LIVE LOOP
+// 🔥 LIVE LOOP (FIXED)
 // =========================
 setInterval(async () => {
   const spike = generateSpike();
   const insight = await generateAIInsight(trendingData);
 
+  // 🧠 STREAM AI TOKENS
+  const words = insight.split(" ");
+
+  for (let i = 0; i < words.length; i++) {
+    broadcast({
+      type: "AI_STREAM",
+      token: words[i] + " "
+    });
+
+    await new Promise(r => setTimeout(r, 25));
+  }
+
+  // 📊 SEND MARKET DATA
   broadcast({
-    type: "LIVE_UPDATE",
+    type: "TICKER",
     spikes: [spike],
-    insight,
     chart: trendingData.top.map(t => ({
-      name: t.query,
-      value: t.count + Math.floor(Math.random() * 30)
+      query: t.query,
+      count: t.count + Math.floor(Math.random() * 30)
     }))
   });
 
