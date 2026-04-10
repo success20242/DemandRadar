@@ -1,156 +1,164 @@
+```javascript
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const { WebSocketServer } = require("ws");
 const http = require("http");
+const { WebSocketServer } = require("ws");
+const { exec } = require("child_process");
 const puppeteer = require("puppeteer");
-require("dotenv").config();
-
 const { Groq } = require("groq-sdk");
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 
-// 🔥 VERSION STAMP (put it here)
-const APP_VERSION = "2.3.0";
-
-console.log("🔥 DemandRadar VERSION:", APP_VERSION);
-console.log("📁 ACTIVE FILE:", __filename);
-
+// =========================
+// INIT
+// =========================
 app.use(cors());
 app.use(express.json());
+app.use(express.static("public"));
+
+console.log("🔥 DemandRadar LIVE ENGINE");
+console.log("📁 Backend active:", __filename);
 
 // =========================
-// 📁 STATIC FILES (WORDCLOUD FIX)
-// =========================
-app.use(express.static("public")); // <-- put wordcloud.png inside /public
-
-// =========================
-// 🤖 GROQ AI CLIENT
+// GROQ CLIENT
 // =========================
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY
 });
 
 // =========================
-// 📊 DATA ENGINE
+// PYTRENDS BRIDGE (REAL DATA)
 // =========================
-let trendingData = {
-  top: [
-    { query: "AI Chatbots", count: 120 },
-    { query: "NFT Art", count: 95 },
-    { query: "Electric Cars", count: 80 }
-  ],
-  categories: {
-    Technology: 120,
-    Finance: 90,
-    Entertainment: 60
-  }
-};
+function getRealTrends(callback) {
+  exec("python trendsEngine.py", (err, stdout) => {
+    if (err) {
+      console.error("PYTRENDS ERROR:", err.message);
+      return callback([]);
+    }
+
+    try {
+      const data = JSON.parse(stdout);
+      callback(data);
+    } catch (e) {
+      console.error("PARSE ERROR:", e.message);
+      callback([]);
+    }
+  });
+}
 
 // =========================
-// 🧠 GROQ AI ENGINE
+// SPIKE ENGINE (REAL LOGIC)
 // =========================
-async function generateAIInsight(data) {
-  const top = data.top.map(t => t.query).join(", ");
+function calculateSpikes(trends) {
+  return trends
+    .filter(t => t.spike >= 1.5)
+    .map(t => ({
+      query: t.query,
+      ratio: t.spike,
+      timestamp: new Date()
+    }))
+    .sort((a, b) => b.ratio - a.ratio);
+}
 
-  const prompt = `
-You are a world-class financial + technology intelligence analyst.
-
-Analyze these trending topics:
-${top}
-
-Return:
-1. Why each topic is trending
-2. Market drivers
-3. Economic impact
-4. 7-day prediction
-
-Keep it concise, executive style.
-`;
+// =========================
+// AI INSIGHT ENGINE
+// =========================
+async function generateAIInsight(trends) {
+  const top = trends.map(t => t.query).join(", ");
 
   try {
     const completion = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        {
+          role: "user",
+          content: `
+You are a global market intelligence analyst.
+
+Analyze these trending topics:
+${top}
+
+Provide:
+- Why each is trending
+- Market drivers
+- Economic impact
+- 7-day prediction
+`
+        }
+      ],
       temperature: 0.7
     });
 
     return completion.choices[0].message.content;
+
   } catch (err) {
     console.error("GROQ ERROR:", err.message);
-    return "AI reasoning temporarily unavailable.";
+    return "AI temporarily unavailable";
   }
 }
 
 // =========================
-// 🚨 SPIKE ENGINE
+// API ROUTE (MAIN)
 // =========================
-function generateSpike() {
-  const queries = [
-    "AI Chatbots",
-    "NFT Art",
-    "Electric Cars",
-    "Bitcoin Surge",
-    "SpaceX",
-    "Quantum Computing"
-  ];
+app.get("/api/trends", (req, res) => {
 
-  const query = queries[Math.floor(Math.random() * queries.length)];
+  getRealTrends(async (trends) => {
 
-  return {
-    query,
-    ratio: (Math.random() * 5 + 1).toFixed(1),
-    timestamp: new Date()
-  };
-}
+    if (!trends || trends.length === 0) {
+      return res.json({
+        top: [],
+        chart: [],
+        spikes: [],
+        categories: {},
+        wordcloud: "/wordcloud.png",
+        insight: "No trend data available"
+      });
+    }
 
-// =========================
-// 📡 API (FIXED STRUCTURE)
-// =========================
-app.get("/api/trends", async (req, res) => {
-  const insight = await generateAIInsight(trendingData);
+    const spikes = calculateSpikes(trends);
 
-  res.json({
-    top: trendingData.top,
-    categories: trendingData.categories,
-    chart: trendingData.top.map(t => ({
-      _id: t.query,
-      count: t.count
-    })),
-    wordcloud: "/wordcloud.png", // served from /public
-    insight
+    const insight = await generateAIInsight(trends);
+
+    res.json({
+      top: trends,
+      chart: trends.map(t => ({
+        _id: t.query,
+        count: t.count
+      })),
+      spikes,
+      categories: {
+        Technology: 120,
+        Finance: 90,
+        Entertainment: 60
+      },
+      wordcloud: "/wordcloud.png",
+      insight
+    });
   });
 });
 
 // =========================
-// 📄 PDF REPORT
+// PDF REPORT
 // =========================
 app.get("/download-report", async (req, res) => {
-  const insight = await generateAIInsight(trendingData);
-
-  const html = `
-  <html>
-  <body style="font-family: Arial; padding: 40px;">
-    <h1>📊 Enterprise Intelligence Report</h1>
-    <p><b>Date:</b> ${new Date().toISOString()}</p>
-
-    <h2>🔥 Trends</h2>
-    ${trendingData.top.map(t => `<p>${t.query} — ${t.count}</p>`).join("")}
-
-    <h2>🧠 AI Insight</h2>
-    <p>${insight}</p>
-  </body>
-  </html>
-  `;
-
   const browser = await puppeteer.launch({
     headless: "new",
     args: ["--no-sandbox"]
   });
 
   const page = await browser.newPage();
-  await page.setContent(html);
+
+  await page.setContent(`
+    <html>
+      <body style="font-family: Arial; padding: 40px;">
+        <h1>DemandRadar Intelligence Report</h1>
+        <p>Generated: ${new Date().toISOString()}</p>
+      </body>
+    </html>
+  `);
 
   const pdf = await page.pdf({ format: "A4" });
 
@@ -165,9 +173,8 @@ app.get("/download-report", async (req, res) => {
 });
 
 // =========================
-// 🌐 WEBSOCKET ENGINE
+// WEBSOCKET ENGINE
 // =========================
-const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: "/ws" });
 
 function broadcast(data) {
@@ -181,39 +188,31 @@ function broadcast(data) {
 }
 
 // =========================
-// 🔥 LIVE LOOP (FIXED)
+// LIVE STREAM LOOP
 // =========================
-setInterval(async () => {
-  const spike = generateSpike();
-  const insight = await generateAIInsight(trendingData);
+setInterval(() => {
 
-  // 🧠 STREAM AI TOKENS
-  const words = insight.split(" ");
+  getRealTrends((trends) => {
 
-  for (let i = 0; i < words.length; i++) {
+    const spikes = calculateSpikes(trends);
+
     broadcast({
-      type: "AI_STREAM",
-      token: words[i] + " "
+      type: "TICKER",
+      spikes,
+      chart: trends.map(t => ({
+        query: t.query,
+        count: t.count
+      }))
     });
 
-    await new Promise(r => setTimeout(r, 25));
-  }
-
-  // 📊 SEND MARKET DATA
-  broadcast({
-    type: "TICKER",
-    spikes: [spike],
-    chart: trendingData.top.map(t => ({
-      query: t.query,
-      count: t.count + Math.floor(Math.random() * 30)
-    }))
   });
 
 }, 8000);
 
 // =========================
-// 🚀 START SERVER
+// START SERVER
 // =========================
 server.listen(PORT, () => {
-  console.log(`🚀 Groq Enterprise AI running on http://localhost:${PORT}`);
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
+```
