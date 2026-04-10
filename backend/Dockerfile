@@ -17,7 +17,7 @@ RUN npm install
 COPY . .
 
 # 🌐 Expose backend port
-EXPOSE 5000
+EXPOSE 8000
 
 # 🚀 Start production server
 CMD ["node", "index.js"]
