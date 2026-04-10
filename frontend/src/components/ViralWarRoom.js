@@ -1,6 +1,9 @@
 import WorldViralMap from "./WorldViralMap";
 
-export default function ViralWarRoom({ data }) {
+export default function ViralWarRoom({ data = {} }) {
+
+  const top = Array.isArray(data.top) ? data.top : [];
+  const spikes = Array.isArray(data.spikes) ? data.spikes : [];
 
   return (
     <div style={styles.container}>
@@ -13,13 +16,13 @@ export default function ViralWarRoom({ data }) {
       {/* KPI STRIP */}
       <div style={styles.kpiRow}>
         <div style={styles.kpi}>
-          📊 Trends: {data?.top?.length || 0}
+          📊 Trends: {top.length}
         </div>
         <div style={styles.kpi}>
-          🚨 Spikes: {data?.spikes?.length || 0}
+          🚨 Spikes: {spikes.length}
         </div>
         <div style={styles.kpi}>
-          🔥 Source: {data?.source || "live"}
+          🔥 Source: {data.source || "live"}
         </div>
       </div>
 
@@ -28,36 +31,48 @@ export default function ViralWarRoom({ data }) {
 
         {/* MAP */}
         <div style={styles.panel}>
-          <WorldViralMap data={data} />
+          {data ? (
+            <WorldViralMap data={data} />
+          ) : (
+            <p>Loading map...</p>
+          )}
         </div>
 
         {/* LIVE FEED */}
         <div style={styles.panel}>
           <h2>🚀 Viral Feed</h2>
 
-          {data?.spikes?.slice(0, 6).map((s, i) => (
-            <div key={i} style={styles.spike}>
-              🔥 {s.query} — {s.ratio}x
-            </div>
-          ))}
+          {spikes.length === 0 ? (
+            <p>No spike data yet</p>
+          ) : (
+            spikes.slice(0, 6).map((s, i) => (
+              <div key={i} style={styles.spike}>
+                🔥 {s.query || "unknown"} — {s.ratio || 1}x
+              </div>
+            ))
+          )}
         </div>
 
         {/* TOP TRENDS */}
         <div style={styles.panel}>
           <h2>📊 Top Global Trends</h2>
 
-          {data?.top?.slice(0, 8).map((t, i) => (
-            <div key={i}>
-              🔹 {t.query} ({t.count})
-            </div>
-          ))}
+          {top.length === 0 ? (
+            <p>Loading trends...</p>
+          ) : (
+            top.slice(0, 8).map((t, i) => (
+              <div key={i}>
+                🔹 {t.query || "unknown"} ({t.count || 0})
+              </div>
+            ))
+          )}
         </div>
 
         {/* AI INSIGHT */}
         <div style={styles.panel}>
           <h2>🧠 Viral Intelligence AI</h2>
           <p style={{ fontSize: "12px", lineHeight: "1.5" }}>
-            {data?.insight || "Analyzing global viral signals..."}
+            {data.insight || "Analyzing global viral signals..."}
           </p>
         </div>
 
