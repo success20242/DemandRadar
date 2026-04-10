@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import WorldViralMap from "./components/WorldViralMap";
+import ViralWarRoom from "./components/ViralWarRoom";
 
 export default function App() {
   const [viralData, setViralData] = useState(null);
@@ -12,7 +12,7 @@ export default function App() {
     fetch("http://localhost:5000/api/trends")
       .then(res => res.json())
       .then(data => {
-        console.log("🌍 VIRAL DATA:", data);
+        console.log("🌍 VIRAL DATA LOADED:", data);
         setViralData(data);
       })
       .catch(err => console.error("FETCH ERROR:", err));
@@ -21,7 +21,7 @@ export default function App() {
   }, []);
 
   // =========================
-  // WEBSOCKET (GLOBAL VIRAL STREAM)
+  // WEBSOCKET VIRAL STREAM
   // =========================
   const connectWS = () => {
     const ws = new WebSocket(`ws://${window.location.hostname}:5000/ws`);
@@ -41,7 +41,7 @@ export default function App() {
     ws.onerror = (e) => console.error("WS ERROR:", e);
 
     ws.onclose = () => {
-      console.log("WS RECONNECTING...");
+      console.log("🔁 WS RECONNECTING...");
       setTimeout(connectWS, 3000);
     };
   };
@@ -51,16 +51,22 @@ export default function App() {
   // =========================
   if (!viralData) {
     return (
-      <div style={{ color: "#00ffcc", background: "#050b18", height: "100vh", display: "flex", justifyContent: "center", alignItems: "center" }}>
-        🌍 Loading Global Viral Intelligence...
+      <div style={{
+        color: "#00ffcc",
+        background: "#050b18",
+        height: "100vh",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        fontFamily: "monospace"
+      }}>
+        🌍 Loading Viral Intelligence Command Center...
       </div>
     );
   }
 
   // =========================
-  // MAIN RENDER
+  // MAIN WAR ROOM
   // =========================
-  return (
-    <WorldViralMap data={viralData} />
-  );
+  return <ViralWarRoom data={viralData} />;
 }
