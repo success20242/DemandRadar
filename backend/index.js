@@ -11,119 +11,88 @@ const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 
+// =========================
+// INIT
+// =========================
 app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 
 console.log("🛰️ VIRAL PREDICTION SATELLITE SYSTEM ONLINE");
+console.log("🛰️ SATELLITE SYSTEM RUNNING: http://localhost:" + PORT);
 
 // =========================
-// AI CLIENT
+// GROQ
 // =========================
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY
 });
 
 // =========================
-// CACHE + SATELLITE MEMORY
+// CACHE SYSTEM
 // =========================
 let lastGoodTrends = [];
-let satelliteMemory = {};
+let cachedTrends = null;
 let lastFetchTime = 0;
-let isFetching = false;
-
 const CACHE_TIME = 60000;
 
-// =========================
-// 🛰️ SATELLITE DATA ENGINE
-// =========================
-function processSatelliteData(trends) {
-  const satellites = {
-    NA: [],
-    EU: [],
-    ASIA: [],
-    AFRICA: [],
-    GLOBAL: []
-  };
-
-  trends.forEach(t => {
-    const country = t.country || "GLOBAL";
-
-    if (["USA", "Canada", "Mexico"].includes(country)) satellites.NA.push(t);
-    else if (["UK", "Germany", "France"].includes(country)) satellites.EU.push(t);
-    else if (["China", "India", "Japan"].includes(country)) satellites.ASIA.push(t);
-    else if (["Nigeria", "Kenya", "South Africa"].includes(country)) satellites.AFRICA.push(t);
-    else satellites.GLOBAL.push(t);
-  });
-
-  return satellites;
-}
+// 🔥 LOCK (FIX OVERLAP)
+let isFetching = false;
 
 // =========================
-// 🔥 VIRAL PREDICTION ENGINE (CORE)
+// PYTRENDS ENGINE (HARDENED)
 // =========================
-function predictVirality(trends) {
-  return trends.map(t => {
-    const momentum = (t.spike || 1) * (t.count || 1);
+function getRealTrends(callback, attempt = 1) {
+  const MAX_ATTEMPTS = 3;
 
-    const velocity =
-      t.previousCount
-        ? ((t.count - t.previousCount) / (t.previousCount || 1)) * 100
-        : Math.random() * 40;
-
-    const ignitionScore = (momentum * 0.6) + (velocity * 0.4);
-
-    return {
-      ...t,
-      momentum,
-      velocity,
-      ignitionScore,
-      prediction:
-        ignitionScore > 150
-          ? "🚨 VIRAL IGNITION IMMINENT"
-          : ignitionScore > 80
-          ? "⚠️ RISING MOMENTUM"
-          : "🟢 STABLE"
-    };
-  });
-}
-
-// =========================
-// PYTRENDS BRIDGE (SAFE)
-// =========================
-function getRealTrends(callback) {
-  if (isFetching) return;
-
+  // 🧠 CACHE CHECK FIRST
   const now = Date.now();
-
-  if (now - lastFetchTime < CACHE_TIME && lastGoodTrends.length) {
-    return callback(lastGoodTrends);
+  if (cachedTrends && now - lastFetchTime < CACHE_TIME) {
+    return callback(cachedTrends);
   }
+
+  if (isFetching) return;
 
   isFetching = true;
 
   const timeout = setTimeout(() => {
-    console.log("⏰ SATELLITE TIMEOUT → fallback engaged");
+    console.error("⏰ SATELLITE TIMEOUT");
     isFetching = false;
-    fallback(callback);
+    fallbackData(callback);
   }, 20000);
 
   exec("python trendsEngine.py", (err, stdout) => {
     clearTimeout(timeout);
     isFetching = false;
 
-    if (err) return fallback(callback);
+    if (err) {
+      console.error("PYTRENDS ERROR:", err.message);
+
+      if (attempt < MAX_ATTEMPTS) {
+        console.log("🔁 RETRYING SATELLITE...");
+        return getRealTrends(callback, attempt + 1);
+      }
+
+      return fallbackData(callback);
+    }
 
     try {
       const data = JSON.parse(stdout);
-      if (!data?.length) return fallback(callback);
+
+      if (!data || data.length === 0) {
+        console.warn("⚠️ EMPTY SATELLITE DATA");
+        return fallbackData(callback);
+      }
 
       lastGoodTrends = data;
+      cachedTrends = data;
       lastFetchTime = now;
 
       callback(data);
-    } catch {
-      fallback(callback);
+
+    } catch (e) {
+      console.error("PARSE ERROR:", e.message);
+      fallbackData(callback);
     }
   });
 }
@@ -131,104 +100,62 @@ function getRealTrends(callback) {
 // =========================
 // FALLBACK SYSTEM
 // =========================
-function fallback(callback) {
-  const data = [
-    { query: "AI Chatbots", count: 120, spike: 2.2, country: "USA" },
-    { query: "Bitcoin Surge", count: 98, spike: 1.9, country: "UAE" },
-    { query: "Electric Cars", count: 110, spike: 1.6, country: "Germany" },
-    { query: "NFT Revival", count: 75, spike: 1.4, country: "UK" }
-  ];
+function fallbackData(callback) {
+  console.log("🛟 Using fallback trend data");
 
-  callback(data);
+  const fallback =
+    lastGoodTrends.length > 0
+      ? lastGoodTrends
+      : [
+          { query: "AI Chatbots", count: 90, spike: 1.3 },
+          { query: "NFT Art", count: 70, spike: 1.2 },
+          { query: "Bitcoin Surge", count: 110, spike: 1.7 },
+          { query: "SpaceX", count: 95, spike: 1.4 }
+        ];
+
+  cachedTrends = fallback;
+  callback(fallback);
 }
 
 // =========================
-// 🌍 HEATMAP ENGINE
+// SPIKE ENGINE
 // =========================
-function buildHeatmap(trends) {
-  const map = {};
+function calculateSpikes(trends) {
+  if (!Array.isArray(trends)) return [];
 
-  trends.forEach(t => {
-    const c = t.country || "GLOBAL";
-
-    if (!map[c]) {
-      map[c] = {
-        country: c,
-        score: 0,
-        topics: []
-      };
-    }
-
-    map[c].score += (t.spike || 1) * (t.count || 1);
-    map[c].topics.push(t.query);
-  });
-
-  return Object.values(map);
+  return trends
+    .filter(t => t?.spike >= 1.5)
+    .map(t => ({
+      query: t.query,
+      ratio: t.spike,
+      timestamp: new Date()
+    }));
 }
 
 // =========================
-// 🧠 AI VIRAL SATELLITE ANALYSIS
-// =========================
-async function generateAIInsight(trends) {
-  const top = trends.map(t => t.query).join(", ");
-
-  try {
-    const res = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
-      messages: [{
-        role: "user",
-        content: `
-You are a VIRAL SATELLITE INTELLIGENCE SYSTEM.
-
-Analyze global trend signals:
-${top}
-
-Return:
-- ignition signals
-- next viral countries
-- propagation paths
-- 6-hour forecast
-`
-      }],
-      temperature: 0.7
-    });
-
-    return res.choices[0].message.content;
-  } catch {
-    return "AI SATELLITE OFFLINE";
-  }
-}
-
-// =========================
-// API: SATELLITE COMMAND CENTER
+// API
 // =========================
 app.get("/api/trends", (req, res) => {
-
   getRealTrends(async (trends) => {
+    const spikes = calculateSpikes(trends);
 
-    const predicted = predictVirality(trends);
-    const heatmap = buildHeatmap(predicted);
-    const satellites = processSatelliteData(predicted);
-    const insight = await generateAIInsight(predicted);
-
-    const topViral = predicted.sort((a, b) => b.ignitionScore - a.ignitionScore);
+    const insight = "Global viral signals active across AI, crypto, and space sectors.";
 
     res.json({
-      top: topViral,
-      heatmap,
-      satellites,
-      chart: topViral.map(t => ({
+      top: trends,
+      spikes,
+      chart: trends.map(t => ({
         _id: t.query,
         count: t.count
       })),
-      insight,
-      system: "VIRAL_SATELLITE_V1"
+      source: trends?.length ? "pytrends" : "fallback",
+      insight
     });
   });
 });
 
 // =========================
-// WEBSOCKET (LIVE SATELLITE FEED)
+// WS
 // =========================
 const wss = new WebSocketServer({ server, path: "/ws" });
 
@@ -243,22 +170,22 @@ function broadcast(data) {
 }
 
 // =========================
-// 🛰️ LIVE SATELLITE LOOP
+// LIVE LOOP (SAFE 30s)
 // =========================
 setInterval(() => {
 
+  if (isFetching) return;
+
   getRealTrends((trends) => {
 
-    const predicted = predictVirality(trends);
-    const heatmap = buildHeatmap(predicted);
+    const spikes = calculateSpikes(trends);
 
     broadcast({
-      type: "SATELLITE_FEED",
-      heatmap,
-      predictions: predicted.map(t => ({
+      type: "TICKER",
+      spikes,
+      chart: trends.map(t => ({
         query: t.query,
-        score: t.ignitionScore,
-        status: t.prediction
+        count: t.count
       }))
     });
 
@@ -267,8 +194,8 @@ setInterval(() => {
 }, 30000);
 
 // =========================
-// START SYSTEM
+// START
 // =========================
 server.listen(PORT, () => {
-  console.log(`🛰️ SATELLITE SYSTEM RUNNING: http://localhost:${PORT}`);
+  console.log("🚀 SYSTEM ONLINE");
 });
