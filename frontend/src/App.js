@@ -30,13 +30,13 @@ export default function App() {
     ws.onmessage = (e) => {
       const msg = JSON.parse(e.data);
 
-      if (msg.type === "TICKER") {
-        setViralData(prev => ({
-          ...prev,
-          ...msg
-        }));
-      }
-    };
+     if (msg.type === "TICKER") {
+  setViralData(prev => ({
+    ...prev,
+    spikes: msg.spikes || prev.spikes,
+    chart: msg.chart || prev.chart
+  }));
+}
 
     ws.onerror = (e) => console.error("WS ERROR:", e);
 
