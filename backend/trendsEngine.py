@@ -1,45 +1,49 @@
-```python
 from pytrends.request import TrendReq
 import json
-
-pytrends = TrendReq(hl='en-US', tz=360)
 
 KEYWORDS = [
     "AI Chatbots",
     "NFT Art",
     "Electric Cars",
     "Bitcoin",
-    "SpaceX",
-    "Quantum Computing"
+    "SpaceX"
 ]
 
+COUNTRIES = ["united_states", "united_kingdom", "nigeria", "india", "united_arab_emirates"]
+
 def fetch_trends():
-    try:
-        pytrends.build_payload(KEYWORDS[:5], timeframe='now 7-d')
-        data = pytrends.interest_over_time()
+    pytrends = TrendReq(hl='en-US', tz=360)
 
-        if data.empty:
-            return []
+    results = []
 
-        results = []
+    for geo in COUNTRIES:
+        try:
+            pytrends.build_payload(KEYWORDS, timeframe='now 7-d', geo=geo)
+            data = pytrends.interest_over_time()
 
-        for keyword in KEYWORDS[:5]:
-            if keyword in data.columns:
-                values = data[keyword].tolist()
+            if data.empty:
+                continue
 
-                current = values[-1]
-                previous = values[-2] if len(values) > 1 else 1
+            for keyword in KEYWORDS:
+                if keyword in data.columns:
+                    values = data[keyword].tolist()
 
-                spike = round(current / max(previous, 1), 2)
+                    current = values[-1]
+                    previous = values[-2] if len(values) > 1 else 1
 
-                results.append({
-                    "query": keyword,
-                    "count": int(current),
-                    "spike": spike
-                })
+                    spike = round(current / max(previous, 1), 2)
 
-        print(json.dumps(results))
+                    results.append({
+                        "query": keyword,
+                        "country": geo,
+                        "count": int(current),
+                        "spike": spike
+                    })
 
-    except Exception as e:
-        print(json.dumps([]))
-```
+        except Exception:
+            continue
+
+    print(json.dumps(results))
+
+if __name__ == "__main__":
+    fetch_trends()
