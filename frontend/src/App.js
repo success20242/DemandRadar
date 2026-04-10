@@ -1,3 +1,4 @@
+```javascript
 import { useEffect, useState, useRef } from "react";
 import { Line, Doughnut } from "react-chartjs-2";
 import {
@@ -35,34 +36,36 @@ export default function App() {
   const wsRef = useRef(null);
 
   // =========================
-  // 🚀 INITIAL LOAD
+  // 🚀 INITIAL LOAD (FIXED)
   // =========================
   useEffect(() => {
-    fetch("/trending") // 🔥 uses proxy
+    fetch("http://localhost:5000/api/trends")
       .then(res => res.json())
       .then(res => {
+        console.log("✅ API DATA:", res);
         setData(res);
-      });
+      })
+      .catch(err => console.error("❌ FETCH ERROR:", err));
 
     connectWS();
   }, []);
 
   // =========================
-  // 🔌 WEBSOCKET ENGINE
+  // 🔌 WEBSOCKET ENGINE (FIXED PORT)
   // =========================
   const connectWS = () => {
-    const ws = new WebSocket(`ws://${window.location.hostname}:8000/ws`);
+    const ws = new WebSocket(`ws://${window.location.hostname}:5000/ws`);
     wsRef.current = ws;
 
     ws.onmessage = (e) => {
       const msg = JSON.parse(e.data);
 
-      // 🔥 GROQ STREAM
+      // 🧠 AI STREAM
       if (msg.type === "AI_STREAM") {
         setStreamText(prev => prev + msg.token);
       }
 
-      // 📊 LIVE DATA
+      // 📊 LIVE DATA UPDATE
       setData(prev => ({
         ...prev,
         chart: msg.chart || prev.chart,
@@ -72,20 +75,25 @@ export default function App() {
       if (msg.spikes) setSpikes(msg.spikes);
     };
 
+    ws.onerror = (err) => {
+      console.error("❌ WS ERROR:", err);
+    };
+
     ws.onclose = () => {
+      console.log("⚠️ WS DISCONNECTED — Reconnecting...");
       setTimeout(connectWS, 2000);
     };
   };
 
   // =========================
-  // 📊 CHARTS
+  // 📊 CHARTS (SAFE)
   // =========================
   const chartData = {
-    labels: data.chart.map(c => c._id || c.time),
+    labels: data.chart?.map(c => c._id || c.time) || [],
     datasets: [
       {
         label: "Trend Volume",
-        data: data.chart.map(c => c.count),
+        data: data.chart?.map(c => c.count) || [],
         borderColor: "#22c55e",
         backgroundColor: "rgba(34,197,94,0.2)",
         tension: 0.4
@@ -94,10 +102,10 @@ export default function App() {
   };
 
   const categoryData = {
-    labels: Object.keys(data.categories),
+    labels: Object.keys(data.categories || {}),
     datasets: [
       {
-        data: Object.values(data.categories),
+        data: Object.values(data.categories || {}),
         backgroundColor: ["#22c55e", "#3b82f6", "#f97316", "#a855f7"]
       }
     ]
@@ -106,14 +114,14 @@ export default function App() {
   // =========================
   // 📊 KPIs
   // =========================
-  const totalTrends = data.top.length;
+  const totalTrends = data.top?.length || 0;
   const totalSpikes = spikes.length;
 
   // =========================
   // 📄 PDF
   // =========================
   const downloadPDF = () => {
-    window.open("/download-report", "_blank");
+    window.open("http://localhost:5000/download-report", "_blank");
   };
 
   return (
@@ -136,7 +144,7 @@ export default function App() {
         {/* LEFT PANEL */}
         <div style={styles.left}>
 
-          {/* 🧠 GROQ TERMINAL */}
+          {/* 🧠 AI TERMINAL */}
           <div style={styles.card}>
             <h2>🧠 LIVE AI REASONING</h2>
             <div style={styles.terminal}>
@@ -144,7 +152,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* 📊 CHART */}
+          {/* 📈 CHART */}
           <div style={styles.card}>
             <h2>📈 Trend Velocity</h2>
             <Line data={chartData} />
@@ -155,7 +163,8 @@ export default function App() {
             <h2>🌍 Word Intelligence</h2>
             {data.wordcloud && (
               <img
-                src={data.wordcloud}
+                src={`http://localhost:5000${data.wordcloud}`}
+                alt="wordcloud"
                 style={styles.wordcloud}
               />
             )}
@@ -176,11 +185,11 @@ export default function App() {
             ))}
           </div>
 
-          {/* TOP */}
+          {/* TOP TRENDS */}
           <div style={styles.card}>
             <h2>📊 Top Trends</h2>
-            {data.top.map((t, i) => (
-              <div key={i}>{t.query}</div>
+            {data.top?.map((t, i) => (
+              <div key={i}>{t.query} — {t.count}</div>
             ))}
           </div>
 
@@ -280,3 +289,4 @@ const styles = {
     cursor: "pointer"
   }
 };
+```
