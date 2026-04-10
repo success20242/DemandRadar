@@ -1,7 +1,23 @@
+```javascript
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 
+// =========================
+// 🌍 GLOBAL ERROR HANDLERS (IMPROVED)
+// =========================
+window.addEventListener("error", (event) => {
+  console.error("🔥 Global Error:", event.message);
+  console.error(event.error);
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  console.error("🔥 Unhandled Promise Rejection:", event.reason);
+});
+
+// =========================
+// 🚀 APP WRAPPER
+// =========================
 function GlobalWrapper() {
   return (
     <React.StrictMode>
@@ -11,19 +27,15 @@ function GlobalWrapper() {
 }
 
 // =========================
-// ⚡ GLOBAL ERROR HANDLER
+// 🚀 ROOT RENDER
 // =========================
-window.addEventListener("error", (event) => {
-  console.error("Global Error Captured:", event.message);
-});
+const rootElement = document.getElementById("root");
 
-window.addEventListener("unhandledrejection", (event) => {
-  console.error("Unhandled Promise Rejection:", event.reason);
-});
+if (!rootElement) {
+  console.error("❌ Root element not found!");
+} else {
+  const root = ReactDOM.createRoot(rootElement);
 
-// =========================
-// 🚀 BOOTSTRAP RENDER
-// =========================
-const root = ReactDOM.createRoot(document.getElementById("root"));
-
-root.render(<GlobalWrapper />);
+  root.render(<GlobalWrapper />);
+}
+```
