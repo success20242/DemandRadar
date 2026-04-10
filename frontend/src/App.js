@@ -1,9 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import {
-  Line,
-  Doughnut
-} from "react-chartjs-2";
-
+import { Line, Doughnut } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -25,79 +21,65 @@ ChartJS.register(
   Legend
 );
 
-function App() {
+export default function App() {
   const [data, setData] = useState({
     top: [],
     categories: {},
-    wordcloud: "",
-    chart: []
+    chart: [],
+    wordcloud: ""
   });
 
   const [spikes, setSpikes] = useState([]);
-  const [insight, setInsight] = useState("");
-  const [typed, setTyped] = useState("");
+  const [streamText, setStreamText] = useState("");
 
   const wsRef = useRef(null);
 
-  // ========================
-  // 🧠 TYPEWRITER (ENTERPRISE)
-  // ========================
+  // =========================
+  // 🚀 INITIAL LOAD
+  // =========================
   useEffect(() => {
-    let i = 0;
-    const txt = insight || "";
-
-    const interval = setInterval(() => {
-      setTyped(txt.slice(0, i));
-      i++;
-      if (i > txt.length) clearInterval(interval);
-    }, 15);
-
-    return () => clearInterval(interval);
-  }, [insight]);
-
-  // ========================
-  // 📡 DATA ENGINE
-  // ========================
-  useEffect(() => {
-    fetch("http://localhost:5000/trending")
+    fetch("/trending") // 🔥 uses proxy
       .then(res => res.json())
       .then(res => {
         setData(res);
-        setInsight(res.insight || "");
       });
-
-    const connectWS = () => {
-      const ws = new WebSocket("ws://localhost:5000/ws");
-      wsRef.current = ws;
-
-      ws.onmessage = (e) => {
-        const msg = JSON.parse(e.data);
-
-        setData(prev => ({
-          ...prev,
-          chart: msg.chart || prev.chart,
-          wordcloud: msg.wordcloud || prev.wordcloud
-        }));
-
-        if (msg.spikes) setSpikes(msg.spikes);
-        if (msg.insight) setInsight(msg.insight);
-      };
-
-      ws.onclose = () => {
-        setTimeout(connectWS, 2000); // auto-reconnect
-      };
-    };
 
     connectWS();
   }, []);
 
-  const downloadPDF = () => {
-    window.open("http://localhost:5000/download-report", "_blank");
+  // =========================
+  // 🔌 WEBSOCKET ENGINE
+  // =========================
+  const connectWS = () => {
+    const ws = new WebSocket(`ws://${window.location.hostname}:8000/ws`);
+    wsRef.current = ws;
+
+    ws.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+
+      // 🔥 GROQ STREAM
+      if (msg.type === "AI_STREAM") {
+        setStreamText(prev => prev + msg.token);
+      }
+
+      // 📊 LIVE DATA
+      setData(prev => ({
+        ...prev,
+        chart: msg.chart || prev.chart,
+        wordcloud: msg.wordcloud || prev.wordcloud
+      }));
+
+      if (msg.spikes) setSpikes(msg.spikes);
+    };
+
+    ws.onclose = () => {
+      setTimeout(connectWS, 2000);
+    };
   };
 
-  // ========================
-  // 📊 CHART DATA (ENTERPRISE)
-  // ========================
+  // =========================
+  // 📊 CHARTS
+  // =========================
   const chartData = {
     labels: data.chart.map(c => c._id || c.time),
     datasets: [
@@ -121,14 +103,18 @@ function App() {
     ]
   };
 
-  // ========================
+  // =========================
   // 📊 KPIs
-  // ========================
+  // =========================
   const totalTrends = data.top.length;
   const totalSpikes = spikes.length;
-  const growthRate = data.chart.length
-    ? ((data.chart[data.chart.length - 1]?.count || 0) / 10).toFixed(2)
-    : 0;
+
+  // =========================
+  // 📄 PDF
+  // =========================
+  const downloadPDF = () => {
+    window.open("/download-report", "_blank");
+  };
 
   return (
     <div style={styles.container}>
@@ -136,82 +122,78 @@ function App() {
       {/* 🔴 LIVE HEADER */}
       <div style={styles.liveBar}>
         <span style={styles.liveDot}></span>
-        ENTERPRISE GLOBAL INTELLIGENCE DASHBOARD
+        DEMANDRADAR TERMINAL PRO — LIVE INTELLIGENCE
       </div>
 
-      {/* KPI ROW */}
+      {/* KPI */}
       <div style={styles.kpiRow}>
         <div style={styles.kpiCard}>📊 Trends: {totalTrends}</div>
         <div style={styles.kpiCard}>🔥 Spikes: {totalSpikes}</div>
-        <div style={styles.kpiCard}>📈 Growth: {growthRate}%</div>
       </div>
-
-      <h1 style={styles.title}>🌍 Global Trend Intelligence</h1>
 
       <div style={styles.grid}>
 
-        {/* LEFT */}
+        {/* LEFT PANEL */}
         <div style={styles.left}>
 
-          {/* WORD CLOUD */}
+          {/* 🧠 GROQ TERMINAL */}
           <div style={styles.card}>
-            <h2>🌍 Live Word Intelligence</h2>
+            <h2>🧠 LIVE AI REASONING</h2>
+            <div style={styles.terminal}>
+              {streamText || "Waiting for intelligence stream..."}
+            </div>
+          </div>
+
+          {/* 📊 CHART */}
+          <div style={styles.card}>
+            <h2>📈 Trend Velocity</h2>
+            <Line data={chartData} />
+          </div>
+
+          {/* 🌍 WORDCLOUD */}
+          <div style={styles.card}>
+            <h2>🌍 Word Intelligence</h2>
             {data.wordcloud && (
               <img
-                src={"http://localhost:8000" + data.wordcloud}
+                src={data.wordcloud}
                 style={styles.wordcloud}
               />
             )}
           </div>
 
-          {/* LINE CHART */}
-          <div style={styles.card}>
-            <h2>📊 Trend Velocity</h2>
-            <Line data={chartData} />
-          </div>
-
-          {/* CATEGORY CHART */}
-          <div style={styles.card}>
-            <h2>📂 Category Distribution</h2>
-            <Doughnut data={categoryData} />
-          </div>
         </div>
 
-        {/* RIGHT */}
+        {/* RIGHT PANEL */}
         <div style={styles.right}>
 
           {/* SPIKES */}
           <div style={styles.card}>
-            <h2>🚨 Spike Engine</h2>
+            <h2>🚨 Spike Alerts</h2>
             {spikes.map((s, i) => (
               <div key={i} style={styles.spike}>
-                ⚡ {s.query} (x{s.ratio})
+                🔥 {s.query} ({s.ratio}x)
               </div>
             ))}
           </div>
 
           {/* TOP */}
           <div style={styles.card}>
-            <h2>📊 Top Signals</h2>
+            <h2>📊 Top Trends</h2>
             {data.top.map((t, i) => (
               <div key={i}>{t.query}</div>
             ))}
           </div>
 
-          {/* AI INSIGHT */}
+          {/* CATEGORY */}
           <div style={styles.card}>
-            <h2>🧠 AI Intelligence Layer</h2>
-            <p style={styles.insight}>
-              {typed}
-              <span style={styles.cursor}>|</span>
-            </p>
+            <h2>📂 Categories</h2>
+            <Doughnut data={categoryData} />
           </div>
 
           {/* REPORT */}
           <div style={styles.card}>
-            <h2>📄 Export Engine</h2>
             <button style={styles.button} onClick={downloadPDF}>
-              Generate Intelligence Report
+              📄 Download Intelligence Report
             </button>
           </div>
 
@@ -221,35 +203,30 @@ function App() {
   );
 }
 
-export default App;
-
-// ========================
-// 🎨 ENTERPRISE STYLES
-// ========================
+// =========================
+// 🎨 STYLES
+// =========================
 const styles = {
   container: {
     background: "#050b18",
     minHeight: "100vh",
-    color: "#fff",
-    fontFamily: "Arial"
+    color: "#00ffcc",
+    fontFamily: "monospace"
   },
 
   liveBar: {
-    background: "#0f172a",
-    padding: "8px",
+    background: "#020617",
+    padding: "10px",
     textAlign: "center",
-    fontWeight: "bold",
-    letterSpacing: "2px"
+    borderBottom: "1px solid #00ffcc"
   },
 
   liveDot: {
-    display: "inline-block",
     width: "8px",
     height: "8px",
-    background: "#22c55e",
-    borderRadius: "50%",
-    marginRight: "10px",
-    animation: "pulse 1s infinite"
+    background: "red",
+    display: "inline-block",
+    marginRight: "10px"
   },
 
   kpiRow: {
@@ -259,16 +236,9 @@ const styles = {
   },
 
   kpiCard: {
-    background: "#111827",
+    background: "#0f172a",
     padding: "10px",
-    borderRadius: "10px",
-    minWidth: "120px",
-    textAlign: "center"
-  },
-
-  title: {
-    textAlign: "center",
-    margin: "10px"
+    borderRadius: "8px"
   },
 
   grid: {
@@ -282,35 +252,31 @@ const styles = {
   right: { display: "flex", flexDirection: "column", gap: "15px" },
 
   card: {
-    background: "#0f172a",
+    background: "#020617",
     padding: "15px",
-    borderRadius: "12px"
-  },
-
-  wordcloud: {
-    width: "100%",
+    border: "1px solid #00ffcc",
     borderRadius: "10px"
   },
 
-  spike: {
-    color: "#f87171",
-    fontWeight: "bold"
-  },
-
-  insight: {
-    fontSize: "14px",
+  terminal: {
+    whiteSpace: "pre-wrap",
+    fontSize: "13px",
     lineHeight: "1.5"
   },
 
-  cursor: {
-    animation: "blink 1s infinite"
+  spike: {
+    color: "#ff4d4d",
+    fontWeight: "bold"
+  },
+
+  wordcloud: {
+    width: "100%"
   },
 
   button: {
-    background: "#22c55e",
+    background: "#00ffcc",
     padding: "10px",
     border: "none",
-    borderRadius: "8px",
     cursor: "pointer"
   }
 };
