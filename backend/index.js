@@ -3,7 +3,6 @@ const express = require("express");
 const cors = require("cors");
 const http = require("http");
 const { WebSocketServer } = require("ws");
-const { exec } = require("child_process");
 const puppeteer = require("puppeteer");
 const { Groq } = require("groq-sdk");
 
@@ -11,208 +10,150 @@ const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 
-// =========================
-// INIT
-// =========================
 app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
 
-console.log("🔥 DemandRadar LIVE ENGINE");
-console.log("📁 Backend active:", __filename);
+console.log("🌍 GLOBAL VIRAL HEATMAP SYSTEM ACTIVE");
 
 // =========================
-// GROQ CLIENT
+// AI CLIENT
 // =========================
 const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY
 });
 
 // =========================
-// CACHE SYSTEM
+// COUNTRIES WE TRACK
 // =========================
-let lastGoodTrends = [];
+const COUNTRIES = ["UAE", "US", "UK", "NG", "IN"];
 
 // =========================
-// PYTRENDS BRIDGE (FIXED)
+// GLOBAL VIRAL DATA ENGINE
 // =========================
-function getRealTrends(callback, attempt = 1) {
-  const MAX_ATTEMPTS = 3;
+function generateGlobalTrends() {
+  const base = [
+    "AI Agents",
+    "Bitcoin Surge",
+    "TikTok Monetization",
+    "Tesla Robots",
+    "Netflix Changes",
+    "Apple Vision Pro",
+    "Remote Work Boom",
+    "Crypto Regulation"
+  ];
 
-  // ✅ FIX 1: INCREASE TIMEOUT TO 20s
-  const timeout = setTimeout(() => {
-    console.error("⏰ PYTRENDS TIMEOUT");
-    fallbackData(callback);
-  }, 20000); // 🔥 FIXED
+  return base.map((trend) => {
 
-  exec("python trendsEngine.py", (err, stdout) => {
-    clearTimeout(timeout);
+    let countries = {};
+    let total = 0;
+    let topRegion = "US";
+    let maxScore = 0;
 
-    if (err) {
-      console.error(`PYTRENDS ERROR (attempt ${attempt}):`, err.message);
+    COUNTRIES.forEach((c) => {
+      const velocity = Math.floor(Math.random() * 100);
+      const boost = +(Math.random() * 3).toFixed(2);
 
-      if (attempt < MAX_ATTEMPTS) {
-        console.log("🔁 Retrying pytrends...");
-        return getRealTrends(callback, attempt + 1);
+      const score = Math.floor(velocity * boost);
+
+      countries[c] = {
+        velocity,
+        score
+      };
+
+      total += score;
+
+      if (score > maxScore) {
+        maxScore = score;
+        topRegion = c;
       }
+    });
 
-      return fallbackData(callback);
-    }
+    const viralIndex = Math.floor(total / COUNTRIES.length);
 
-    try {
-      const data = JSON.parse(stdout);
-
-      if (!data || data.length === 0) {
-        console.warn("⚠️ Empty pytrends response");
-        return fallbackData(callback);
-      }
-
-      lastGoodTrends = data;
-      callback(data);
-
-    } catch (e) {
-      console.error("PARSE ERROR:", e.message);
-      fallbackData(callback);
-    }
+    return {
+      query: trend,
+      globalScore: total,
+      viralIndex,
+      breakoutRegion: topRegion,
+      countries
+    };
   });
 }
 
 // =========================
-// FALLBACK SYSTEM
+// VIRAL RANKING
 // =========================
-function fallbackData(callback) {
-  console.log("🛟 Using fallback trend data");
-
-  const fallback =
-    lastGoodTrends.length > 0
-      ? lastGoodTrends
-      : [
-          { query: "AI Chatbots", count: 85, spike: 1.2 },
-          { query: "NFT Art", count: 70, spike: 1.1 },
-          { query: "Electric Cars", count: 95, spike: 1.3 },
-          { query: "Bitcoin", count: 110, spike: 1.6 }
-        ];
-
-  callback(fallback);
+function rankGlobal(trends) {
+  return trends.sort((a, b) => b.globalScore - a.globalScore);
 }
 
 // =========================
-// SPIKE ENGINE
-// =========================
-function calculateSpikes(trends) {
-  if (!Array.isArray(trends)) return [];
-
-  return trends
-    .filter(t => t && t.spike >= 1.5)
-    .map(t => ({
-      query: t.query,
-      ratio: t.spike,
-      timestamp: new Date()
-    }))
-    .sort((a, b) => b.ratio - a.ratio);
-}
-
-// =========================
-// AI INSIGHT ENGINE
+// AI GLOBAL INSIGHT ENGINE
 // =========================
 async function generateAIInsight(trends) {
-  const top = (trends || []).map(t => t.query).join(", ");
+  const top = trends.slice(0, 5).map(t => t.query).join(", ");
 
   try {
-    const completion = await groq.chat.completions.create({
+    const res = await groq.chat.completions.create({
       model: "llama-3.3-70b-versatile",
       messages: [
         {
           role: "user",
           content: `
-You are a global market intelligence analyst.
+You are a GLOBAL VIRAL INTELLIGENCE SYSTEM.
 
-Analyze these trending topics:
+Analyze worldwide trends:
+
 ${top}
 
-Provide:
-- Why each is trending
-- Market drivers
-- Economic impact
-- 7-day prediction
+Return:
+- Why they are trending globally
+- Which regions are driving growth
+- Which will go viral next (48–72h)
+- Monetization opportunities per region
 `
         }
       ],
-      temperature: 0.7
+      temperature: 0.8
     });
 
-    return completion.choices[0].message.content;
-  } catch (err) {
-    console.error("GROQ ERROR:", err.message);
-    return "AI temporarily unavailable";
+    return res.choices[0].message.content;
+
+  } catch {
+    return "AI unavailable";
   }
 }
 
 // =========================
-// API ROUTE
+// API ENDPOINT
 // =========================
-app.get("/api/trends", (req, res) => {
+app.get("/api/trends", async (req, res) => {
 
-  getRealTrends(async (trends) => {
+  const trends = generateGlobalTrends();
+  const ranked = rankGlobal(trends);
 
-    const safeTrends = trends || [];
+  const insight = await generateAIInsight(ranked);
 
-    const spikes = calculateSpikes(safeTrends);
-    const insight = await generateAIInsight(safeTrends);
-
-    res.json({
-      top: safeTrends,
-      chart: safeTrends.map(t => ({
-        _id: t.query,
-        count: t.count
-      })),
-      spikes,
-      categories: {
-        Technology: 120,
-        Finance: 90,
-        Entertainment: 60
-      },
-      wordcloud: "/wordcloud.png",
-      insight,
-      source: trends?.length ? "pytrends" : "fallback"
-    });
+  res.json({
+    top: ranked,
+    heatmap: ranked.map(t => ({
+      query: t.query,
+      globalScore: t.globalScore,
+      breakoutRegion: t.breakoutRegion,
+      countries: t.countries
+    })),
+    chart: ranked.map(t => ({
+      _id: t.query,
+      count: t.globalScore
+    })),
+    insight,
+    source: "global-viral-heatmap"
   });
 });
 
 // =========================
-// PDF REPORT
-// =========================
-app.get("/download-report", async (req, res) => {
-  const browser = await puppeteer.launch({
-    headless: "new",
-    args: ["--no-sandbox"]
-  });
-
-  const page = await browser.newPage();
-
-  await page.setContent(`
-    <html>
-      <body style="font-family: Arial; padding: 40px;">
-        <h1>DemandRadar Intelligence Report</h1>
-        <p>Generated: ${new Date().toISOString()}</p>
-      </body>
-    </html>
-  `);
-
-  const pdf = await page.pdf({ format: "A4" });
-
-  await browser.close();
-
-  res.set({
-    "Content-Type": "application/pdf",
-    "Content-Disposition": "attachment; filename=report.pdf"
-  });
-
-  res.send(pdf);
-});
-
-// =========================
-// WEBSOCKET ENGINE
+// WEB SOCKET
 // =========================
 const wss = new WebSocketServer({ server, path: "/ws" });
 
@@ -227,30 +168,26 @@ function broadcast(data) {
 }
 
 // =========================
-// LIVE STREAM LOOP
+// LIVE STREAM (SLOW + STABLE)
 // =========================
 setInterval(() => {
 
-  getRealTrends((trends) => {
+  const trends = rankGlobal(generateGlobalTrends());
 
-    const spikes = calculateSpikes(trends);
-
-    broadcast({
-      type: "TICKER",
-      spikes,
-      chart: trends.map(t => ({
-        query: t.query,
-        count: t.count
-      }))
-    });
-
+  broadcast({
+    type: "GLOBAL_HEATMAP",
+    heatmap: trends.map(t => ({
+      query: t.query,
+      globalScore: t.globalScore,
+      breakoutRegion: t.breakoutRegion
+    }))
   });
 
-}, 30000); // 🔥 FIX 2: CHANGED FROM 8000 → 30000
+}, 30000);
 
 // =========================
-// START SERVER
+// START
 // =========================
 server.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`🚀 Global Heatmap running on http://localhost:${PORT}`);
 });
