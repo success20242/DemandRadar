@@ -108,7 +108,7 @@ function generateSpike() {
 // =========================
 // 📡 API (FIXED STRUCTURE)
 // =========================
-app.get("/trending", async (req, res) => {
+app.get("/api/trends", async (req, res) => {
   const insight = await generateAIInsight(trendingData);
 
   res.json({
