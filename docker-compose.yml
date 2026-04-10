@@ -25,7 +25,7 @@ services:
       mongodb:
         condition: service_healthy
     ports:
-      - "5000:5000"
+      - "8000:8000"
     environment:
       MONGO_URI: "mongodb://mongodb:27017/demandradar"
       NODE_ENV: "production"
@@ -34,7 +34,7 @@ services:
     volumes:
       - ./backend/static:/app/static
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5000/trending"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/trending"]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -50,7 +50,7 @@ services:
     ports:
       - "3000:80"
     environment:
-      REACT_APP_API_URL: http://localhost:5000
+      REACT_APP_API_URL: http://localhost:8000
 
 volumes:
   mongo_data:
