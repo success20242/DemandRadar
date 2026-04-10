@@ -11,6 +11,10 @@ const { Groq } = require("groq-sdk");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// 🔥 VERSION STAMP (put it here)
+const APP_VERSION = "2.3.0";
+console.log("🔥 Running DemandRadar version:", APP_VERSION);
+
 app.use(cors());
 app.use(express.json());
 
