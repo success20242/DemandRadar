@@ -158,7 +158,7 @@ function App() {
             <h2>🌍 Live Word Intelligence</h2>
             {data.wordcloud && (
               <img
-                src={"http://localhost:5000" + data.wordcloud}
+                src={"http://localhost:8000" + data.wordcloud}
                 style={styles.wordcloud}
               />
             )}
