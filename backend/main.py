@@ -82,12 +82,30 @@ def fetch_trends():
         })
 
 # --------------------------
-# Generate WordCloud
+# Generate WordCloud (FIXED)
 # --------------------------
 def generate_wordcloud():
-    text = " ".join([doc['query'] for doc in collection.find()])
-    if text:
-        wc = WordCloud(width=800, height=400).generate(text)
+    words = []
+
+    for doc in collection.find():
+        query = doc.get('query', '')
+        count = doc.get('count', 1)
+
+        # Split into meaningful words and weight them
+        for w in query.split():
+            words.extend([w] * count)
+
+    text = " ".join(words)
+
+    if text.strip():
+        wc = WordCloud(
+            width=1000,
+            height=500,
+            background_color='black',
+            colormap='viridis',
+            max_words=100
+        ).generate(text)
+
         wc.to_file("static/wordcloud.png")
 
 # --------------------------
@@ -116,12 +134,12 @@ def detect_spikes():
     return spikes
 
 # --------------------------
-# Broadcast via WebSocket
+# Broadcast via WebSocket (FIXED)
 # --------------------------
-async def broadcast(spikes):
+async def broadcast(data):
     for ws in clients:
         try:
-            await ws.send_json(spikes)
+            await ws.send_json(data)
         except Exception as e:
             print("WebSocket send error:", e)
 
@@ -136,14 +154,12 @@ async def ws_endpoint(ws: WebSocket):
         clients.remove(ws)
 
 # --------------------------
-# API endpoint: /trending
+# API endpoint: /trending (CLEANED)
 # --------------------------
 @app.get("/trending")
 def trending():
-    fetch_trends()
-    generate_wordcloud()
-
     top = list(collection.find().sort("count", -1).limit(10))
+
     cats = {}
     for d in collection.find():
         c = d.get("category", "other")
@@ -152,21 +168,30 @@ def trending():
     return {
         "top": top,
         "categories": cats,
-        "wordcloud": "/static/wordcloud.png"
+        "wordcloud": "/static/wordcloud.png?t=" + str(datetime.datetime.utcnow().timestamp())
     }
 
 # --------------------------
-# Async loop for continuous updates
+# Async loop for continuous updates (UPGRADED)
 # --------------------------
 async def loop():
     while True:
         try:
             fetch_trends()
+            generate_wordcloud()
+
             spikes = detect_spikes()
-            if spikes:
-                await broadcast(spikes)
+
+            data = {
+                "spikes": spikes,
+                "wordcloud": "/static/wordcloud.png?t=" + str(datetime.datetime.utcnow().timestamp())
+            }
+
+            await broadcast(data)
+
         except Exception as e:
             print("Error in loop:", e)
+
         await asyncio.sleep(10)
 
 # Start async loop in daemon thread
