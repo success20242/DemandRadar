@@ -29,20 +29,21 @@ const groq = new Groq({
 });
 
 // =========================
-// CACHE SYSTEM (IMPORTANT FIX)
+// CACHE SYSTEM
 // =========================
 let lastGoodTrends = [];
 
 // =========================
-// PYTRENDS BRIDGE (HARDENED)
+// PYTRENDS BRIDGE (FIXED)
 // =========================
 function getRealTrends(callback, attempt = 1) {
   const MAX_ATTEMPTS = 3;
 
+  // ✅ FIX 1: INCREASE TIMEOUT TO 20s
   const timeout = setTimeout(() => {
     console.error("⏰ PYTRENDS TIMEOUT");
     fallbackData(callback);
-  }, 8000);
+  }, 20000); // 🔥 FIXED
 
   exec("python trendsEngine.py", (err, stdout) => {
     clearTimeout(timeout);
@@ -77,7 +78,7 @@ function getRealTrends(callback, attempt = 1) {
 }
 
 // =========================
-// FALLBACK SYSTEM (CRITICAL SAFETY NET)
+// FALLBACK SYSTEM
 // =========================
 function fallbackData(callback) {
   console.log("🛟 Using fallback trend data");
@@ -96,7 +97,7 @@ function fallbackData(callback) {
 }
 
 // =========================
-// SPIKE ENGINE (SAFE)
+// SPIKE ENGINE
 // =========================
 function calculateSpikes(trends) {
   if (!Array.isArray(trends)) return [];
@@ -148,10 +149,12 @@ Provide:
 }
 
 // =========================
-// API ROUTE (HARDENED)
+// API ROUTE
 // =========================
 app.get("/api/trends", (req, res) => {
+
   getRealTrends(async (trends) => {
+
     const safeTrends = trends || [];
 
     const spikes = calculateSpikes(safeTrends);
@@ -227,7 +230,9 @@ function broadcast(data) {
 // LIVE STREAM LOOP
 // =========================
 setInterval(() => {
+
   getRealTrends((trends) => {
+
     const spikes = calculateSpikes(trends);
 
     broadcast({
@@ -238,8 +243,10 @@ setInterval(() => {
         count: t.count
       }))
     });
+
   });
-}, 8000);
+
+}, 30000); // 🔥 FIX 2: CHANGED FROM 8000 → 30000
 
 // =========================
 // START SERVER
