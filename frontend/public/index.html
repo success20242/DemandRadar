@@ -71,13 +71,15 @@
 
     <div id="root"></div>
 
-    <!-- ⚡ Remove boot screen when React loads -->
+    <!-- ⚡ FIXED BOOT REMOVAL -->
     <script>
       window.addEventListener("load", () => {
         setTimeout(() => {
           const boot = document.getElementById("boot-screen");
-          if (boot) boot.style.display = "none";
-        }, 1200);
+          if (boot) {
+            boot.remove(); // 🔥 FIX: fully removes overlay instead of hiding
+          }
+        }, 800); // 🔥 faster + cleaner startup
       });
     </script>
 
