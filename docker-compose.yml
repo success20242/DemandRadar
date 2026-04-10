@@ -4,34 +4,53 @@ services:
   mongodb:
     image: mongo:6.0
     container_name: mongodb
+    restart: always
     ports:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     container_name: demandradar-backend
+    restart: always
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
     ports:
-      - "8000:8000"
+      - "5000:5000"
     environment:
       MONGO_URI: "mongodb://mongodb:27017/"
+      NODE_ENV: "production"
+    env_file:
+      - ./backend/.env
     volumes:
       - ./backend/static:/app/static
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/trending"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: demandradar-frontend
+    restart: always
     depends_on:
       - backend
     ports:
-      - "3000:80"  # maps host port 3000 to container's Nginx port 80
+      - "3000:80"
+    environment:
+      - REACT_APP_API_URL=http://backend:5000
 
 volumes:
   mongo_data:
