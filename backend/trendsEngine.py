@@ -2,6 +2,8 @@ from pytrends.request import TrendReq
 import json
 import time
 
+pytrends = TrendReq(hl='en-US', tz=360)  # 🔥 GLOBAL SESSION (IMPORTANT)
+
 KEYWORDS = [
     "AI Chatbots",
     "NFT Art",
@@ -17,14 +19,7 @@ def fetch_trends():
 
     for geo in COUNTRIES:
         try:
-            pytrends = TrendReq(
-                hl='en-US',
-                tz=360,
-                retries=2,
-                backoff_factor=0.5
-            )
-
-            time.sleep(2)  # 🔥 IMPORTANT: prevents Google blocking
+            time.sleep(5)  # 🔥 FIX: slower requests = less blocking
 
             pytrends.build_payload(KEYWORDS, timeframe='now 7-d', geo=geo)
             data = pytrends.interest_over_time()
@@ -48,7 +43,7 @@ def fetch_trends():
                         "spike": spike
                     })
 
-        except Exception as e:
+        except Exception:
             continue
 
     print(json.dumps(results))
