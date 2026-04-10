@@ -1,11 +1,25 @@
 {
   "name": "demandradar",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
+  "description": "Enterprise AI Trend Intelligence Platform",
   "scripts": {
-    "start": "concurrently \"npm start --prefix backend\" \"npm start --prefix frontend\""
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    
+    "server": "npm start --prefix backend",
+    
+    "client": "npm start --prefix frontend",
+
+    "start": "node backend/index.js",
+
+    "build": "npm install --prefix frontend && npm run build --prefix frontend",
+
+    "install-all": "npm install && npm install --prefix backend && npm install --prefix frontend"
   },
   "devDependencies": {
     "concurrently": "^8.2.0"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }
