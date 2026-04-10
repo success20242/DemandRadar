@@ -2,11 +2,84 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Trend Dashboard</title>
+
+    <title>Enterprise Trend Intelligence Dashboard</title>
+
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Real-time global trend intelligence system powered by AI, Twitter & Google Trends fusion." />
+
+    <!-- 💡 Enterprise UI styling preload -->
+    <style>
+      body {
+        margin: 0;
+        background: #0a0f1c;
+        font-family: Arial, sans-serif;
+        color: white;
+      }
+
+      #boot-screen {
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(circle at center, #111827, #0a0f1c);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        z-index: 9999;
+      }
+
+      .loader {
+        width: 60px;
+        height: 60px;
+        border: 4px solid #1f2937;
+        border-top: 4px solid #22c55e;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 20px;
+      }
+
+      @keyframes spin {
+        100% { transform: rotate(360deg); }
+      }
+
+      .title {
+        font-size: 18px;
+        color: #22c55e;
+        letter-spacing: 2px;
+      }
+
+      .sub {
+        font-size: 12px;
+        opacity: 0.7;
+        margin-top: 5px;
+      }
+    </style>
+
   </head>
+
   <body>
+
+    <!-- ⚡ BOOT LOADING SCREEN -->
+    <div id="boot-screen">
+      <div class="loader"></div>
+      <div class="title">AI INTELLIGENCE ENGINE</div>
+      <div class="sub">Connecting global trend streams...</div>
+    </div>
+
     <noscript>You need to enable JavaScript to run this app.</noscript>
+
     <div id="root"></div>
+
+    <!-- ⚡ Remove boot screen when React loads -->
+    <script>
+      window.addEventListener("load", () => {
+        setTimeout(() => {
+          const boot = document.getElementById("boot-screen");
+          if (boot) boot.style.display = "none";
+        }, 1200);
+      });
+    </script>
+
   </body>
 </html>
