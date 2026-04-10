@@ -1,11 +1,17 @@
-# Use Nginx to serve static files
+# =========================
+# 🧠 ENTERPRISE FRONTEND BUILD
+# =========================
+
 FROM nginx:alpine
 
-# Copy the compiled React build to Nginx's html folder
+# 📦 Copy build output
 COPY build/ /usr/share/nginx/html
 
-# Expose port 80
+# ⚡ Replace default nginx config with enterprise version
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# 🌐 Expose port
 EXPOSE 80
 
-# Start Nginx
+# 🚀 Run Nginx
 CMD ["nginx", "-g", "daemon off;"]
