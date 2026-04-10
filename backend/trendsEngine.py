@@ -1,5 +1,6 @@
 from pytrends.request import TrendReq
 import json
+import time
 
 KEYWORDS = [
     "AI Chatbots",
@@ -12,16 +13,23 @@ KEYWORDS = [
 COUNTRIES = ["united_states", "united_kingdom", "nigeria", "india", "united_arab_emirates"]
 
 def fetch_trends():
-    pytrends = TrendReq(hl='en-US', tz=360)
-
     results = []
 
     for geo in COUNTRIES:
         try:
+            pytrends = TrendReq(
+                hl='en-US',
+                tz=360,
+                retries=2,
+                backoff_factor=0.5
+            )
+
+            time.sleep(2)  # 🔥 IMPORTANT: prevents Google blocking
+
             pytrends.build_payload(KEYWORDS, timeframe='now 7-d', geo=geo)
             data = pytrends.interest_over_time()
 
-            if data.empty:
+            if data is None or data.empty:
                 continue
 
             for keyword in KEYWORDS:
@@ -40,7 +48,7 @@ def fetch_trends():
                         "spike": spike
                     })
 
-        except Exception:
+        except Exception as e:
             continue
 
     print(json.dumps(results))
