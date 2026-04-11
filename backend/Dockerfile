@@ -1,25 +1,20 @@
-# =========================
-# 🚀 STABLE NODE + PYTHON + PYTRENDS FIX
-# =========================
-
 FROM node:18
 
-# Install system dependencies
+# Install Python properly
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
     python3-setuptools \
     python3-wheel \
-    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip (VERY IMPORTANT)
-RUN pip3 install --upgrade pip setuptools wheel
+# Upgrade pip (critical fix)
+RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel
 
-# Install pytrends safely
-RUN pip3 install pytrends
+# Install pytrends
+RUN pip3 install --no-cache-dir pytrends
 
-# Make python accessible
+# Make python command available
 RUN ln -sf python3 /usr/bin/python
 
 WORKDIR /app
