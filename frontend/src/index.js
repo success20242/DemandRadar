@@ -2,15 +2,8 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 
-const root = ReactDOM.createRoot(document.getElementById("root"));
-
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
 // =========================
-// 🌍 GLOBAL ERROR HANDLERS (IMPROVED)
+// 🌍 GLOBAL ERROR HANDLERS
 // =========================
 window.addEventListener("error", (event) => {
   console.error("🔥 Global Error:", event.message);
@@ -22,18 +15,7 @@ window.addEventListener("unhandledrejection", (event) => {
 });
 
 // =========================
-// 🚀 APP WRAPPER
-// =========================
-function GlobalWrapper() {
-  return (
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>
-  );
-}
-
-// =========================
-// 🚀 ROOT RENDER
+// 🚀 ROOT RENDER (ONLY ONCE)
 // =========================
 const rootElement = document.getElementById("root");
 
@@ -42,6 +24,9 @@ if (!rootElement) {
 } else {
   const root = ReactDOM.createRoot(rootElement);
 
-  root.render(<GlobalWrapper />);
+  root.render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
 }
-```
