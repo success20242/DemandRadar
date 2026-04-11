@@ -1,14 +1,17 @@
 # =========================
-# 🚀 ENTERPRISE NODE BACKEND (WITH PYTHON SUPPORT)
+# 🚀 ENTERPRISE NODE BACKEND (STABLE PYTHON VERSION)
 # =========================
 
-FROM node:18-alpine
+FROM node:18-bullseye
 
-# Install Python + pip
-RUN apk add --no-cache python3 py3-pip
+# Install Python + pip properly
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependency for trends engine
-RUN pip3 install pytrends
+# Install Python dependency
+RUN pip3 install pytrends --break-system-packages
 
 WORKDIR /app
 
