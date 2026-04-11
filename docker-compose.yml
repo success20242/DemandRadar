@@ -1,4 +1,4 @@
-YOU MEAN LIKE THIS: version: "3.9"
+version: "3.9"
 
 services:
   mongodb:
@@ -9,48 +9,29 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    build: ./backend
     container_name: demandradar-backend
     restart: always
-    depends_on:
-      mongodb:
-        condition: service_healthy
     ports:
       - "8000:8000"
     environment:
-      MONGO_URI: "mongodb://mongodb:27017/demandradar"
-      NODE_ENV: "production"
-    env_file:
-      - ./backend/.env
-    volumes:
-      - ./backend/static:/app/static
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/trending"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
+      MONGO_URI: mongodb://mongodb:27017/demandradar
+      PORT: 8000
+    depends_on:
+      - mongodb
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    build: ./frontend
     container_name: demandradar-frontend
     restart: always
-    depends_on:
-      - backend
     ports:
       - "3000:80"
     environment:
-      REACT_APP_API_URL: http://localhost:8000
+      REACT_APP_API_URL: http://backend:8000
+    depends_on:
+      - backend
 
 volumes:
   mongo_data:
