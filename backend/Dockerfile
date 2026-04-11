@@ -1,17 +1,23 @@
 # =========================
-# 🚀 ENTERPRISE NODE BACKEND (STABLE PYTHON VERSION)
+# 🚀 STABLE ENTERPRISE BACKEND
 # =========================
 
 FROM node:18-bullseye
 
-# Install Python + pip properly
+# Install system dependencies (IMPORTANT FIX)
 RUN apt-get update && apt-get install -y \
     python3 \
     python3-pip \
+    python3-venv \
+    ca-certificates \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependency
-RUN pip3 install pytrends --break-system-packages
+# Upgrade pip FIRST (critical fix)
+RUN python3 -m pip install --upgrade pip
+
+# Install Python package
+RUN pip3 install pytrends
 
 WORKDIR /app
 
