@@ -1,17 +1,26 @@
 # =========================
-# 🚀 STABLE NODE + PYTHON BACKEND
+# 🚀 STABLE NODE + PYTHON + PYTRENDS FIX
 # =========================
 
 FROM node:18
 
-# Install python + pip properly (Debian-based)
-RUN apt-get update && apt-get install -y python3 python3-pip
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-setuptools \
+    python3-wheel \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
-# Make python command work
-RUN ln -sf python3 /usr/bin/python
+# Upgrade pip (VERY IMPORTANT)
+RUN pip3 install --upgrade pip setuptools wheel
 
-# Install python dependency
+# Install pytrends safely
 RUN pip3 install pytrends
+
+# Make python accessible
+RUN ln -sf python3 /usr/bin/python
 
 WORKDIR /app
 
