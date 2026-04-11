@@ -10,40 +10,65 @@ export default function App() {
   // =========================
   useEffect(() => {
     fetch("http://localhost:5000/api/trends")
-      .then(res => res.json())
-      .then(data => {
+      .then((res) => res.json())
+      .then((data) => {
         console.log("🌍 VIRAL DATA LOADED:", data);
         setViralData(data);
       })
-      .catch(err => console.error("FETCH ERROR:", err));
+      .catch((err) => console.error("FETCH ERROR:", err));
 
     connectWS();
+
+    // cleanup on unmount
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
   }, []);
 
   // =========================
   // WEBSOCKET VIRAL STREAM
   // =========================
   const connectWS = () => {
-    const ws = new WebSocket(`ws://${window.location.hostname}:5000/ws`);
-    wsRef.current = ws;
+    try {
+      const ws = new WebSocket(
+        `ws://${window.location.hostname}:5000/ws`
+      );
 
-    ws.onmessage = (e) => {
-      const msg = JSON.parse(e.data);
+      wsRef.current = ws;
 
-     if (msg.type === "TICKER") {
-  setViralData(prev => ({
-    ...prev,
-    spikes: msg.spikes || prev.spikes,
-    chart: msg.chart || prev.chart
-  }));
-}
+      ws.onopen = () => {
+        console.log("🔗 WebSocket connected");
+      };
 
-    ws.onerror = (e) => console.error("WS ERROR:", e);
+      ws.onmessage = (e) => {
+        try {
+          const msg = JSON.parse(e.data);
 
-    ws.onclose = () => {
-      console.log("🔁 WS RECONNECTING...");
-      setTimeout(connectWS, 3000);
-    };
+          if (msg.type === "TICKER") {
+            setViralData((prev) => ({
+              ...(prev || {}),
+              spikes: msg.spikes || prev?.spikes || [],
+              chart: msg.chart || prev?.chart || []
+            }));
+          }
+        } catch (err) {
+          console.error("WS MESSAGE PARSE ERROR:", err);
+        }
+      }; // ✅ FIXED: properly closed function
+
+      ws.onerror = (e) => {
+        console.error("WS ERROR:", e);
+      };
+
+      ws.onclose = () => {
+        console.log("🔁 WS RECONNECTING...");
+        setTimeout(connectWS, 3000);
+      };
+    } catch (err) {
+      console.error("WS CONNECTION FAILED:", err);
+    }
   };
 
   // =========================
@@ -51,15 +76,17 @@ export default function App() {
   // =========================
   if (!viralData) {
     return (
-      <div style={{
-        color: "#00ffcc",
-        background: "#050b18",
-        height: "100vh",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        fontFamily: "monospace"
-      }}>
+      <div
+        style={{
+          color: "#00ffcc",
+          background: "#050b18",
+          height: "100vh",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          fontFamily: "monospace"
+        }}
+      >
         🌍 Loading Viral Intelligence Command Center...
       </div>
     );
