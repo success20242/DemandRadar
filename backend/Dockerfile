@@ -1,23 +1,17 @@
 # =========================
-# 🚀 STABLE ENTERPRISE BACKEND
+# 🚀 NODE + PYTHON BACKEND FIXED
 # =========================
 
-FROM node:18-bullseye
+FROM node:18-alpine
 
-# Install system dependencies (IMPORTANT FIX)
-RUN apt-get update && apt-get install -y \
-    python3 \
-    python3-pip \
-    python3-venv \
-    ca-certificates \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+# Install python + pip
+RUN apk add --no-cache python3 py3-pip
 
-# Upgrade pip FIRST (critical fix)
-RUN python3 -m pip install --upgrade pip
+# Make python command work
+RUN ln -sf python3 /usr/bin/python
 
-# Install Python package
-RUN pip3 install pytrends
+# Install python dependency
+RUN pip3 install pytrends --break-system-packages
 
 WORKDIR /app
 
@@ -27,7 +21,6 @@ RUN npm install
 COPY . .
 
 EXPOSE 5000
-
 ENV PORT=5000
 
 CMD ["node", "index.js"]
