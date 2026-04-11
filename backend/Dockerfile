@@ -1,5 +1,5 @@
 # =========================
-# 🚀 ENTERPRISE NODE BACKEND
+# 🚀 ENTERPRISE NODE BACKEND (PORT 5000 FIXED)
 # =========================
 
 FROM node:18-alpine
@@ -16,8 +16,11 @@ RUN npm install
 # 📁 Copy source code
 COPY . .
 
-# 🌐 Expose backend port
-EXPOSE 8000
+# 🌐 Expose backend port (UPDATED)
+EXPOSE 5000
+
+# 🌍 Set environment variable (IMPORTANT)
+ENV PORT=5000
 
 # 🚀 Start production server
 CMD ["node", "index.js"]
