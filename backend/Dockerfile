@@ -1,21 +1,27 @@
+# =========================
+# 🚀 FINAL STABLE BACKEND (NODE + PYTHON VENV)
+# =========================
+
 FROM node:18
 
-# Install Python properly
+# Install Python + venv
 RUN apt-get update && apt-get install -y \
     python3 \
+    python3-venv \
     python3-pip \
-    python3-setuptools \
-    python3-wheel \
     && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip (critical fix)
-RUN pip3 install --no-cache-dir --upgrade pip setuptools wheel
+# Create virtual environment
+RUN python3 -m venv /opt/venv
 
-# Install pytrends
-RUN pip3 install --no-cache-dir pytrends
+# Activate venv (IMPORTANT)
+ENV PATH="/opt/venv/bin:$PATH"
 
-# Make python command available
-RUN ln -sf python3 /usr/bin/python
+# Upgrade pip inside venv
+RUN pip install --upgrade pip setuptools wheel
+
+# Install pytrends inside venv
+RUN pip install pytrends
 
 WORKDIR /app
 
